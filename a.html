@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sphere TD Code Export Reader</title>
+
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+
+<style>
+:root{
+  --bg1:#0f172a;
+  --bg2:#1e293b;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --accent:#2563eb;
+  --accent2:#1d4ed8;
+  --border:#e2e8f0;
+}
+
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  padding:24px;
+  font-family:Inter,Arial,sans-serif;
+  background:linear-gradient(135deg,var(--bg1),var(--bg2));
+  min-height:100vh;
+}
+
+.wrapper{
+  max-width:1000px;
+  margin:auto;
+}
+
+.card{
+  background:var(--card);
+  border-radius:22px;
+  padding:28px;
+  box-shadow:0 20px 60px rgba(0,0,0,.25);
+}
+
+h1{
+  margin:0 0 10px 0;
+  font-size:30px;
+  color:var(--text);
+}
+
+.desc{
+  margin:0 0 20px 0;
+  color:var(--muted);
+  line-height:1.5;
+}
+
+textarea{
+  width:100%;
+  min-height:220px;
+  resize:vertical;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:16px;
+  font-size:14px;
+  font-family:Consolas,monospace;
+  outline:none;
+}
+
+textarea:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 4px rgba(37,99,235,.12);
+}
+
+.controls{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:16px;
+}
+
+button{
+  border:none;
+  padding:12px 18px;
+  border-radius:14px;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+  transition:.18s ease;
+}
+
+button.primary{
+  background:var(--accent);
+  color:white;
+}
+
+button.primary:hover{
+  background:var(--accent2);
+}
+
+button.secondary{
+  background:#eef2ff;
+  color:#1e3a8a;
+}
+
+button.secondary:hover{
+  background:#dbeafe;
+}
+
+button.ghost{
+  background:#f1f5f9;
+  color:#334155;
+}
+
+button.ghost:hover{
+  background:#e2e8f0;
+}
+
+.status{
+  margin-top:14px;
+  color:var(--muted);
+  font-size:14px;
+}
+
+pre{
+  margin-top:16px;
+  background:#0f172a;
+  color:#e2e8f0;
+  padding:18px;
+  border-radius:16px;
+  overflow:auto;
+  white-space:pre-wrap;
+  word-break:break-word;
+  min-height:120px;
+}
+
+.footer{
+  margin-top:14px;
+  color:#94a3b8;
+  font-size:13px;
+}
+</style>
+</head>
+
+<body>
+<div class="wrapper">
+  <div class="card">
+
+    <h1>Sphere TD Code Export Reader</h1>
+
+    <p class="desc">
+      Paste a build export string (usually starts with <code>H4sIA</code>).
+    </p>
+
+    <textarea id="input" placeholder="Paste encoded text here..."></textarea>
+
+    <div class="controls">
+      <button class="primary" onclick="decodeData()">Decode</button>
+      <button class="secondary" onclick="pasteClipboard()">Paste Clipboard</button>
+      <button class="ghost" onclick="clearAll()">Clear</button>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <pre id="output"></pre>
+
+    <div class="footer">
+      Works locally in your browser. Nothing is uploaded.
+    </div>
+
+  </div>
+</div>
+
+<script>
+function b64ToUint8Array(b64){
+  const binary = atob(b64.trim());
+  const bytes = new Uint8Array(binary.length);
+
+  for(let i=0;i<binary.length;i++){
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return bytes;
+}
+
+function decodeData(){
+  const input = document.getElementById("input").value.trim();
+  const output = document.getElementById("output");
+  const status = document.getElementById("status");
+
+  output.textContent = "";
+  status.textContent = "";
+
+  if(!input){
+    status.textContent = "Please enter a code first.";
+    return;
+  }
+
+  try{
+    const compressed = b64ToUint8Array(input);
+    const decompressed = pako.ungzip(compressed, {to:"string"});
+
+    let shown = decompressed;
+
+    try{
+      shown = JSON.stringify(JSON.parse(decompressed), null, 2);
+    }catch(e){}
+
+    output.textContent = shown;
+    status.textContent =
+      "Decoded successfully • " +
+      compressed.length +
+      " compressed bytes";
+  }
+  catch(err){
+    output.textContent = "Error: " + err.message;
+    status.textContent = "Could not decode this string.";
+  }
+}
+
+async function pasteClipboard(){
+  const status = document.getElementById("status");
+
+  try{
+    const text = await navigator.clipboard.readText();
+    document.getElementById("input").value = text;
+    status.textContent = "Clipboard pasted.";
+  }
+  catch(err){
+    status.textContent =
+      "Clipboard access blocked. Use normal paste instead.";
+  }
+}
+
+function clearAll(){
+  document.getElementById("input").value = "";
+  document.getElementById("output").textContent = "";
+  document.getElementById("status").textContent = "";
+}
+</script>
+</body>
+</html>
